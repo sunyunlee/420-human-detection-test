@@ -70,6 +70,7 @@ def getMousePts(event, x, y, flags, param):
                      2)
         mousePts.append((x, y))
 
+
 def generate_output(image, people):
     """
     Generates output based on the specified image and the people + social

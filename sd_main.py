@@ -12,6 +12,6 @@ if __name__ == "__main__":
     path = sys.argv[1]
     image = cv2.imread(path)
     roi, scale = get_projection_parameters(image)
-    bboxes = detect_people(image)
+    bboxes = detect_people(image, "yolov3")
     people = measure_locations(image, bboxes, roi, scale)
     generate_output(image, people)

@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 
 mousePts = []
-
+image = ""
 
 def get_projection_parameters(image):
     """
@@ -25,7 +25,6 @@ def get_projection_parameters(image):
     first and third points are supposed to form a vertical line two meters tall
     in physical space.
     """
-
     while True:
         cv2.imshow("image", image)
         cv2.waitKey(1)
@@ -84,9 +83,14 @@ def generate_output(image, people):
     """
     pass
 
+def main(inputImage):
+    global image
+    image = inputImage
+    cv2.namedWindow("image")
+    cv2.setMouseCallback("image", getMousePts)
+    lst = get_projection_parameters(image)
+    return ((lst[0], lst[1], lst[3], lst[3]), (lst[4], lst[5], lst[6]))
 
 if __name__ == "__main__":
     image = cv2.imread("images/FudanPed00003.png")
-    cv2.namedWindow("image")
-    cv2.setMouseCallback("image", getMousePts)
-    print(get_projection_parameters(image))
+    main(image)

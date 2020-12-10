@@ -23,6 +23,8 @@ def detect_people(image, method: str = Union["yolov3", "hog"]):
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     if method == "yolov3":
         result = YOLOv3(image_gray)
+        x1, y1, x2, y2 = result 
+        return [y2, x2, y1, x1]
     # elif method == "hog":
     #     result = HOG(image)
 
@@ -107,10 +109,10 @@ def process_yolov3_output(outputs, input_shape):
 def HOG(img, scale: int=0.5):
     """
     Returns bounding boxes around humans that the HOG detectors detect
-    * y-coordinate on the image of the person's bounding box's bottom
-    * x-coordinate on the image of the person's bounding box's right
-    * y-coordinate on the image of the person's bounding box's top
-    * x-coordinate on the image of the person's bounding box's left 
+    * x1 is the person's bounding box's left
+    * y1 is the person's bounding box's top 
+    * x2 is the person's bounding box's right
+    * y2 is the person's bounding box's bottom 
     """
     
     hog = cv2.HOGDescriptor()
@@ -130,5 +132,5 @@ def HOG(img, scale: int=0.5):
             x2 = int((x + w) / scale)
             y2 = int((y + h) / scale)
             results.append([x1, y1, x2, y2])
-            
+
     return results

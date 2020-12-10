@@ -1,4 +1,10 @@
+# # Code mainly taken from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
+import time
+
 import numpy as np
+import cv2
+
+mousePts = []
 
 
 def get_projection_parameters(image):
@@ -19,8 +25,50 @@ def get_projection_parameters(image):
     first and third points are supposed to form a vertical line two meters tall
     in physical space.
     """
-    return ((0, 0), (0, 0), (0, 0), (0, 0)), ((0, 0), (0, 0), (0, 0))
 
+    while True:
+        cv2.imshow("image", image)
+        cv2.waitKey(1)
+        if len(mousePts) == 8:
+            cv2.destroyWindow("image")
+            break
+
+    return mousePts[:7]
+
+
+def getMousePts(event, x, y, flags, param):
+    """
+    Handles mouse click events by adding the (x, y) coordinate to the global mousePts list and drawing the circle on the
+    image.
+
+    https://docs.opencv.org/master/d7/dfc/group__highgui.html#gab7aed186e151d5222ef97192912127a4
+
+    Arguments:
+        event: The mouse click event.
+        x: the x-coordinate of the point on the image that was clicked.
+        y: the y-coordinate of the point on the image that was clicked.
+        flags: one of the cv::MouseEventFlags constants.
+        param: an optional parameter.
+    """
+    global mousePts
+    if event == cv2.EVENT_LBUTTONDOWN:
+        if len(mousePts) < 4:
+            cv2.circle(image, (x, y), 10, (0, 255, 0), -1)
+        else:
+            cv2.circle(image, (x, y), 10, (255, 0, 0), -1)
+
+        if 1 <= len(mousePts) <= 3:
+            # Draw a line connecting the new point with the most recently added point.
+            cv2.line(image, (x, y), (mousePts[-1][0], mousePts[-1][1]), (70, 70, 70),
+                     2)
+            if len(mousePts) == 3:
+                # Draw a line connecting the final point with the first point to close off the rectangle.
+                cv2.line(image, (x, y), (mousePts[0][0], mousePts[0][1]), (70, 70, 70), 2)
+
+        if len(mousePts) >= 5:
+            cv2.line(image, (x, y), (mousePts[4][0], mousePts[4][1]), (70, 70, 70),
+                     2)
+        mousePts.append((x, y))
 
 def generate_output(image, people):
     """
@@ -34,3 +82,10 @@ def generate_output(image, people):
     like the output of sd_measure.measure_locations().
     """
     pass
+
+
+if __name__ == "__main__":
+    image = cv2.imread("images/FudanPed00003.png")
+    cv2.namedWindow("image")
+    cv2.setMouseCallback("image", getMousePts)
+    print(get_projection_parameters(image))

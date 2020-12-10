@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Union 
 import cv2
+from imutils.object_detection import non_max_suppression
+import imutils
 
 
 weight_path = "yolov3.weights"
@@ -100,3 +102,33 @@ def process_yolov3_output(outputs, input_shape):
         boxes_filtered.append([left, top, right, bottom])
 
     return boxes_filtered
+
+
+def HOG(img, scale: int=0.5):
+    """
+    Returns bounding boxes around humans that the HOG detectors detect
+    * y-coordinate on the image of the person's bounding box's bottom
+    * x-coordinate on the image of the person's bounding box's right
+    * y-coordinate on the image of the person's bounding box's top
+    * x-coordinate on the image of the person's bounding box's left 
+    """
+    
+    hog = cv2.HOGDescriptor()
+    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+    scale = 0.5
+
+    img = imutils.resize(img, width=int(scale*img.shape[1]))
+    rects, weights = hog.detectMultiScale(img, winStride=(2, 2), padding=(10, 10), scale=scale)
+
+    # pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
+    results = []
+    for i, (x, y, w, h) in enumerate(rects): 
+        if weights[i][0] > 0.2:
+            x1 = int(x / scale)
+            y1 = int(y / scale)
+            x2 = int((x + w) / scale)
+            y2 = int((y + h) / scale)
+            results.append([x1, y1, x2, y2])
+            
+    return results

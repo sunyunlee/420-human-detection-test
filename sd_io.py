@@ -1,6 +1,5 @@
 # # Code mainly taken from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
 import time
-
 import numpy as np
 import cv2
 
@@ -41,8 +40,6 @@ def get_projection_parameters(image):
         if len(mousePts) == 8:
             cv2.destroyWindow("image")
             break
-    
-    mousePts = [(y, x) for (x, y) in mousePts]
 
     return ((mousePts[0], mousePts[1], mousePts[2], mousePts[3]),
             (mousePts[4], mousePts[5], mousePts[6]))
@@ -63,6 +60,7 @@ def getMousePts(event, x, y, flags, param):
         param: an optional parameter.
     """
     global displayImage, mousePts
+    
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(mousePts) < 4:
             cv2.circle(displayImage, (x, y), 10, (0, 255, 0), -1)
@@ -72,19 +70,20 @@ def getMousePts(event, x, y, flags, param):
         if 1 <= len(mousePts) <= 3:
             # Draw a line connecting the new point with the most recently added
             # point.
-            cv2.line(displayImage, (x, y), (mousePts[-1][0], mousePts[-1][1]),
+            cv2.line(displayImage, (x, y), (mousePts[-1][1], mousePts[-1][0]),
                      (70, 70, 70),
                      2)
             if len(mousePts) == 3:
                 # Draw a line connecting the final point with the first point to
                 # close off the rectangle.
-                cv2.line(displayImage, (x, y), (mousePts[0][0], mousePts[0][1]),
+                cv2.line(displayImage, (x, y), (mousePts[0][1], mousePts[0][0]),
                          (70, 70, 70), 2)
 
         if len(mousePts) >= 5:
-            cv2.line(displayImage, (x, y), (mousePts[4][0], mousePts[4][1]),
+            cv2.line(displayImage, (x, y), (mousePts[4][1], mousePts[4][0]),
                      (70, 70, 70), 2)
-        mousePts.append((x, y))
+        
+        mousePts.append((y, x))
 
 
 def generate_output(image, people):

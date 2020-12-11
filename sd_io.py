@@ -4,10 +4,12 @@ import time
 import numpy as np
 import cv2
 
-mousePts = []
-image = ""
 
-def get_projection_parameters(inputImage):
+displayImage = None
+mousePts = None
+
+
+def get_projection_parameters(image):
     """
     Gets the projection parameters (ROI and scale) for the specified image.
 
@@ -25,27 +27,31 @@ def get_projection_parameters(inputImage):
     first and third points are supposed to form a vertical line two meters tall
     in physical space.
     """
-    global image
-    global mousePts
-    image = inputImage
+    global displayImage, mousePts
+
+    displayImage = image.copy()
+    mousePts = []
+    
     cv2.namedWindow("image")
     cv2.setMouseCallback("image", getMousePts)
 
     while True:
-        cv2.imshow("image", image)
+        cv2.imshow("image", displayImage)
         cv2.waitKey(1)
         if len(mousePts) == 8:
             cv2.destroyWindow("image")
             break
+    
     mousePts = [(y, x) for (x, y) in mousePts]
 
-    return (mousePts[0], mousePts[1], mousePts[2], mousePts[3]), (mousePts[4], mousePts[5], mousePts[6])
+    return ((mousePts[0], mousePts[1], mousePts[2], mousePts[3]),
+            (mousePts[4], mousePts[5], mousePts[6]))
 
 
 def getMousePts(event, x, y, flags, param):
     """
-    Handles mouse click events by adding the (x, y) coordinate to the global mousePts list and drawing the circle on the
-    image.
+    Handles mouse click events by adding the (x, y) coordinate to the global
+    mousePts list and drawing the circle on the image.
 
     https://docs.opencv.org/master/d7/dfc/group__highgui.html#gab7aed186e151d5222ef97192912127a4
 
@@ -56,24 +62,28 @@ def getMousePts(event, x, y, flags, param):
         flags: one of the cv::MouseEventFlags constants.
         param: an optional parameter.
     """
-    global mousePts
+    global displayImage, mousePts
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(mousePts) < 4:
-            cv2.circle(image, (x, y), 10, (0, 255, 0), -1)
+            cv2.circle(displayImage, (x, y), 10, (0, 255, 0), -1)
         else:
-            cv2.circle(image, (x, y), 10, (255, 0, 0), -1)
+            cv2.circle(displayImage, (x, y), 10, (255, 0, 0), -1)
 
         if 1 <= len(mousePts) <= 3:
-            # Draw a line connecting the new point with the most recently added point.
-            cv2.line(image, (x, y), (mousePts[-1][0], mousePts[-1][1]), (70, 70, 70),
+            # Draw a line connecting the new point with the most recently added
+            # point.
+            cv2.line(displayImage, (x, y), (mousePts[-1][0], mousePts[-1][1]),
+                     (70, 70, 70),
                      2)
             if len(mousePts) == 3:
-                # Draw a line connecting the final point with the first point to close off the rectangle.
-                cv2.line(image, (x, y), (mousePts[0][0], mousePts[0][1]), (70, 70, 70), 2)
+                # Draw a line connecting the final point with the first point to
+                # close off the rectangle.
+                cv2.line(displayImage, (x, y), (mousePts[0][0], mousePts[0][1]),
+                         (70, 70, 70), 2)
 
         if len(mousePts) >= 5:
-            cv2.line(image, (x, y), (mousePts[4][0], mousePts[4][1]), (70, 70, 70),
-                     2)
+            cv2.line(displayImage, (x, y), (mousePts[4][0], mousePts[4][1]),
+                     (70, 70, 70), 2)
         mousePts.append((x, y))
 
 

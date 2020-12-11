@@ -39,7 +39,7 @@ def get_projection_parameters(inputImage):
             break
     mousePts = [(y, x) for (x, y) in mousePts]
 
-    return (mousePts[0], mousePts[1], mousePts[2], mousePts[3]), (mousePts[3], mousePts[5], mousePts[6])
+    return (mousePts[0], mousePts[1], mousePts[2], mousePts[3]), (mousePts[4], mousePts[5], mousePts[6])
 
 
 def getMousePts(event, x, y, flags, param):

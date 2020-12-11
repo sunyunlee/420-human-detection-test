@@ -7,7 +7,7 @@ import cv2
 mousePts = []
 image = ""
 
-def get_projection_parameters(image):
+def get_projection_parameters(inputImage):
     """
     Gets the projection parameters (ROI and scale) for the specified image.
 
@@ -25,14 +25,21 @@ def get_projection_parameters(image):
     first and third points are supposed to form a vertical line two meters tall
     in physical space.
     """
+    global image
+    global mousePts
+    image = inputImage
+    cv2.namedWindow("image")
+    cv2.setMouseCallback("image", getMousePts)
+
     while True:
         cv2.imshow("image", image)
         cv2.waitKey(1)
         if len(mousePts) == 8:
             cv2.destroyWindow("image")
             break
+    mousePts = [(y, x) for (x, y) in mousePts]
 
-    return mousePts[:7]
+    return (mousePts[0], mousePts[1], mousePts[2], mousePts[3]), (mousePts[3], mousePts[5], mousePts[6])
 
 
 def getMousePts(event, x, y, flags, param):
@@ -82,15 +89,3 @@ def generate_output(image, people):
     like the output of sd_measure.measure_locations().
     """
     pass
-
-def main(inputImage):
-    global image
-    image = inputImage
-    cv2.namedWindow("image")
-    cv2.setMouseCallback("image", getMousePts)
-    lst = get_projection_parameters(image)
-    return ((lst[0], lst[1], lst[3], lst[3]), (lst[4], lst[5], lst[6]))
-
-if __name__ == "__main__":
-    image = cv2.imread("images/FudanPed00003.png")
-    main(image)

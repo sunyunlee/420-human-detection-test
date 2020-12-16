@@ -6,3 +6,5 @@ yolov3.weights
 *.ipynb
 
 .idea
+
+.DS_Store

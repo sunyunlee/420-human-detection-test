@@ -21,11 +21,9 @@ def detect_people(image, method: str = Union["yolov3", "hog"]):
     * y-coordinate on the image of the person's bounding box's top
     * x-coordinate on the image of the person's bounding box's left
     """
-    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if method == "yolov3":
         result = YOLOv3(image_gray)
-        x1, y1, x2, y2 = result 
-        return [y2, x2, y1, x1]
     # elif method == "hog":
     #     result = HOG(image)
 

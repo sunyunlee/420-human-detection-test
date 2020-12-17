@@ -1,4 +1,4 @@
-# # Code mainly taken from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
+# Code mainly taken from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
 import time
 import numpy as np
 import cv2
@@ -86,15 +86,26 @@ def getMousePts(event, x, y, flags, param):
         mousePts.append((y, x))
 
 
-def generate_output(image, people):
+def generate_image_output(image, people):
     """
     Generates output based on the specified image and the people + social
     distancing information detected in it.
 
-    This output might consist of the image with colored rectangles drawn around
-    the people, for instance.
-
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
+    """
+    pass
+
+
+def generate_video_output(frame_seq, people_seq):
+    """
+    Generates output based on the specified video and the people + social
+    distancing information detected in it.
+
+    <frame_seq> is a list of the video's frames, in order, as individual images.
+    
+    <people_seq> is a list of the same length as <frame_seq>. Each element is
+    itself a list of dicts representing the people in the corresponding frame,
+    formatted like the output of sd_measure.measure_locations().
     """
     pass

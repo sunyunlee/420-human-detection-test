@@ -138,8 +138,13 @@ def drawBoxesAndLines(image, people):
         topLeft = (d['bbox'][2], d['bbox'][3])
         bottomRight = (d['bbox'][0], d['bbox'][1])
         center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
-        # Draw bbox around person
-        image = cv2.rectangle(image, topLeft, bottomRight, (0, 0, 255), 2)
+
+        if d['too_close']:
+            # Draw a red box around the person if they're too close to other people.
+            image = cv2.rectangle(image, topLeft, bottomRight, (0, 0, 255), 2)
+        else:
+            # Draw a green box around the person if they're not close to anybody.
+            image = cv2.rectangle(image, topLeft, bottomRight, (0, 255, 0), 2)
 
         for idx in d['too_close']:
             coordsOfOtherPerson = people[idx]['bbox']

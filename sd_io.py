@@ -135,20 +135,19 @@ def drawBoxesAndLines(image, people):
     like the output of sd_measure.measure_locations().
     """
     for d in people:
-        topLeft = (d['bbox'][2], d['bbox'][3])
-        bottomRight = (d['bbox'][0], d['bbox'][1])
+        topLeft = (d['bbox'][3], d['bbox'][2])
+        bottomRight = (d['bbox'][1], d['bbox'][0])
         center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
-
-        if d['too_close']:
-            # Draw a red box around the person if they're too close to other people.
-            image = cv2.rectangle(image, topLeft, bottomRight, (0, 0, 255), 2)
+        # Draw bbox around person
+        if len(d['too_close']) == 0:
+            color = (0, 255, 0)
         else:
-            # Draw a green box around the person if they're not close to anybody.
-            image = cv2.rectangle(image, topLeft, bottomRight, (0, 255, 0), 2)
+            color = (0, 0, 255)
+        image = cv2.rectangle(image, topLeft, bottomRight, color, 2)
 
         for idx in d['too_close']:
             coordsOfOtherPerson = people[idx]['bbox']
-            centerOfOtherPerson = ((coordsOfOtherPerson[2] + coordsOfOtherPerson[0]) // 2,
-                                   (coordsOfOtherPerson[3] + coordsOfOtherPerson[1]) // 2)
+            centerOfOtherPerson = ((coordsOfOtherPerson[1] + coordsOfOtherPerson[3]) // 2,
+                                   (coordsOfOtherPerson[0] + coordsOfOtherPerson[2]) // 2)
             image = cv2.line(image, center, centerOfOtherPerson, (0, 0, 255), 2)
     return image

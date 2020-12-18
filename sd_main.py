@@ -71,21 +71,19 @@ def handleImageFlow(imagePath, outputPath, detectMethod):
 
 def main():
     path = sys.argv[1]
-    outputPath = sys.argv[2]
+    output_path = sys.argv[2]
     if len(sys.argv) <= 3:
         detect_method = 'yolov3'
     else:
         detect_method = sys.argv[3]
 
     if path_is_video(path):
-        # Input is a video
-        handleVideoFlow(path, outputPath, detect_method)
+        handleVideoFlow(path, output_path, detect_method)
     else:
-        # Input is static image
-        handleImageFlow(path, outputPath, detect_method)
+        handleImageFlow(path, output_path, detect_method)
 
 
-# Usage: "python sd_main.py <path to input image> <path to output> [<detection method>]"
+# Usage: "python sd_main.py <path to input> <path to output> [<detection method>]"
 # <detection method> is 'yolov3' if not specified
 if __name__ == "__main__":
     main()

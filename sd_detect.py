@@ -59,12 +59,9 @@ def YOLOv3(img):
 def process_yolov3_output(outputs, input_shape):
     """
     From the output of the model, select detections for humans, and which confidence 
-    score greater than 0.5
-    The output is in the format [x1, y1, x2, y2]
-    * x1 is the person's bounding box's left
-    * y1 is the person's bounding box's top 
-    * x2 is the person's bounding box's right
-    * y2 is the person's bounding box's bottom 
+    score greater than 0.5.
+    
+    The output is in the same format as that of detect_people().
 
     Ref: https://opencv-tutorial.readthedocs.io/en/latest/yolo/yolo.html
     """    
@@ -100,18 +97,16 @@ def process_yolov3_output(outputs, input_shape):
     for i in indices:
         x,y,w,h = boxes[i]
         left, top, right, bottom = x, y, x + w, y + h
-        boxes_filtered.append([left, top, right, bottom])
+        boxes_filtered.append([bottom, right, top, left])
 
     return boxes_filtered
 
 
 def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: int):
     """
-    Returns bounding boxes around humans that the HOG detectors detect
-    * x1 is the person's bounding box's left
-    * y1 is the person's bounding box's top 
-    * x2 is the person's bounding box's right
-    * y2 is the person's bounding box's bottom 
+    Returns bounding boxes around humans that the HOG detectors detect.
+
+    The output is in the same format as that of detect_people().
     """
     hog = cv2.HOGDescriptor()
     # hog = cv2.HOGDescriptor(img.shape, (8, 8), (4, 4), (8, 8), 9, 1, -1, 0, 0.2, 1, 64, True)
@@ -125,11 +120,11 @@ def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: int):
     # pick = non_max_suppression(rects, probs=None, overlapThresh=0.1)
     results = []
     for i, (x, y, w, h) in enumerate(rects): 
-        x1 = int(x / scale)
-        y1 = int(y / scale)
-        x2 = int((x + w) / scale)
-        y2 = int((y + h) / scale)
-        results.append([x1, y1, x2, y2])
+        left = int(x / scale)
+        top = int(y / scale)
+        right = int((x + w) / scale)
+        bottom = int((y + h) / scale)
+        results.append([bottom, right, top, left])
 
     return results, list(weights.flatten())
 

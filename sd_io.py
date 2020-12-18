@@ -2,7 +2,7 @@
 import time
 import numpy as np
 import cv2
-
+import operator
 
 displayImage = None
 mousePts = None
@@ -27,10 +27,9 @@ def get_projection_parameters(image):
     in physical space.
     """
     global displayImage, mousePts
-
     displayImage = image.copy()
     mousePts = []
-    
+
     cv2.namedWindow("image")
     cv2.setMouseCallback("image", getMousePts)
 
@@ -38,8 +37,11 @@ def get_projection_parameters(image):
         cv2.imshow("image", displayImage)
         cv2.waitKey(1)
         if len(mousePts) == 8:
-            cv2.destroyWindow("image")
             break
+
+    # Should destroy the window, but it's not working.
+    cv2.destroyWindow("image")
+    cv2.waitKey(1)
 
     return ((mousePts[0], mousePts[1], mousePts[2], mousePts[3]),
             (mousePts[4], mousePts[5], mousePts[6]))
@@ -60,7 +62,7 @@ def getMousePts(event, x, y, flags, param):
         param: an optional parameter.
     """
     global displayImage, mousePts
-    
+
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(mousePts) < 4:
             cv2.circle(displayImage, (x, y), 10, (0, 255, 0), -1)
@@ -82,30 +84,66 @@ def getMousePts(event, x, y, flags, param):
         if len(mousePts) >= 5:
             cv2.line(displayImage, (x, y), (mousePts[4][1], mousePts[4][0]),
                      (70, 70, 70), 2)
-        
+
         mousePts.append((y, x))
 
 
-def generate_image_output(image, people):
+def generate_image_output(image, people, outputPath):
     """
     Generates output based on the specified image and the people + social
-    distancing information detected in it.
+    distancing information detected in it. It saves the generated image at the given outputPath.
 
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
     """
-    pass
+    image = drawBoxesAndLines(image, people)
+    cv2.imwrite(outputPath, image)
 
 
-def generate_video_output(frame_seq, people_seq):
+def generate_video_output(frame_seq, people_seq, fps, outputPath):
     """
     Generates output based on the specified video and the people + social
-    distancing information detected in it.
+    distancing information detected in it. It saves the generated video at the given outputPath.
 
     <frame_seq> is a list of the video's frames, in order, as individual images.
-    
+
     <people_seq> is a list of the same length as <frame_seq>. Each element is
     itself a list of dicts representing the people in the corresponding frame,
     formatted like the output of sd_measure.measure_locations().
     """
-    pass
+    if not frame_seq:
+        return
+
+    fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+    output_movie = cv2.VideoWriter(outputPath, fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
+
+    numberOfFrames = len(frame_seq)
+    for i in range(numberOfFrames):
+        frame = frame_seq[i]
+        people = people_seq[i]
+        frame = drawBoxesAndLines(frame, people)
+        output_movie.write(frame)
+
+    output_movie.release()
+
+
+def drawBoxesAndLines(image, people):
+    """
+    Draws the bounding boxes and lines on the given image.
+
+    <people> is a list of dicts representing the people in the image, formatted
+    like the output of sd_measure.measure_locations().
+    """
+    for d in people:
+        topLeft = (d['bbox'][2], d['bbox'][3])
+        bottomRight = (d['bbox'][0], d['bbox'][1])
+        center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
+        # Draw bbox around person
+        image = cv2.rectangle(image, topLeft, bottomRight, (0, 0, 255), 2)
+
+        for idx in d['too_close']:
+            coordsOfOtherPerson = people[idx]['bbox']
+            centerOfOtherPerson = ((coordsOfOtherPerson[2] + coordsOfOtherPerson[0]) // 2,
+                                   (coordsOfOtherPerson[3] + coordsOfOtherPerson[1]) // 2)
+            image = cv2.line(image, center, centerOfOtherPerson, (0, 0, 255), 2)
+    return image

@@ -51,7 +51,4 @@ def measure_locations(image, bboxes, roi, scale):
                 p1['too_close'].append(i2)
                 p2['too_close'].append(i1)
 
-    for i in range(len(people)):
-        print(str(i) + ': ' + str(people[i]))
-    
     return people

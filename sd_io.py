@@ -3,6 +3,8 @@ import time
 import numpy as np
 import cv2
 import operator
+import plotly.graph_objects as go
+
 
 displayImage = None
 mousePts = None
@@ -88,22 +90,28 @@ def getMousePts(event, x, y, flags, param):
         mousePts.append((y, x))
 
 
-def generate_image_output(image, people, outputPath):
+def generate_image_output(image, people, outputPath, outputCloudPath):
     """
     Generates output based on the specified image and the people + social
-    distancing information detected in it. It saves the generated image at the given outputPath.
+    distancing information detected in it. It saves the generated image at
+    the given outputPath, and the point cloud of the people's locations at
+    outputCloudPath.
 
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
     """
     image = drawBoxesAndLines(image, people)
     cv2.imwrite(outputPath, image)
+    plotPointCloud(people, outputCloudPath)
 
 
-def generate_video_output(frame_seq, people_seq, fps, outputPath):
+def generate_video_output(frame_seq, people_seq, fps,
+                          outputPath, outputCloudPath):
     """
     Generates output based on the specified video and the people + social
-    distancing information detected in it. It saves the generated video at the given outputPath.
+    distancing information detected in it. It saves the generated video at the
+    given outputPath, and the point cloud of the people's locations (at frame 0)
+    at outputCloudPath.
 
     <frame_seq> is a list of the video's frames, in order, as individual images.
 
@@ -111,9 +119,6 @@ def generate_video_output(frame_seq, people_seq, fps, outputPath):
     itself a list of dicts representing the people in the corresponding frame,
     formatted like the output of sd_measure.measure_locations().
     """
-    if not frame_seq:
-        return
-
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     output_movie = cv2.VideoWriter(outputPath, fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
 
@@ -125,6 +130,8 @@ def generate_video_output(frame_seq, people_seq, fps, outputPath):
         output_movie.write(frame)
 
     output_movie.release()
+
+    plotPointCloud(people_seq[0], outputCloudPath)
 
 
 def drawBoxesAndLines(image, people):
@@ -151,3 +158,40 @@ def drawBoxesAndLines(image, people):
                                    (coordsOfOtherPerson[0] + coordsOfOtherPerson[2]) // 2)
             image = cv2.line(image, center, centerOfOtherPerson, (0, 0, 255), 2)
     return image
+
+
+def plotPointCloud(people, output_path):
+    """
+    Plots a point cloud of <people>'s locations in 3D space, saving it at
+    <output_path>.
+
+    <people> is a list of dicts representing the people, formatted like the
+    output of sd_measure.measure_locations().
+    """
+    x = []
+    y = []
+    z = []
+    colors = []
+    for p in people:
+        location = p['location']
+        x.append(location[0])
+        y.append(location[1])
+        z.append(location[2])
+        if len(p['too_close']) == 0:
+            colors.append('#00ff00')
+        else:
+            colors.append('#ff0000')
+    
+    fig = go.Figure(data=[go.Scatter3d(
+        x=x, y=y, z=z,
+        mode='markers',
+        marker=dict(
+            size=2,
+            color=colors,
+            opacity=1
+        ))],
+        layout=go.Layout(
+            scene = dict(
+                aspectmode='data'
+        )))
+    fig.write_html(file=output_path)

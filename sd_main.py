@@ -12,7 +12,7 @@ def path_is_video(path):
     return path.lower().endswith(('.avi', '.mpg', '.mp4'))
 
 
-def handleVideoFlow(videoPath, outputPath, detectMethod):
+def handleVideoFlow(videoPath, outputPath, outputCloudPath, detectMethod):
     """
     Runs the social detection flow on the video.
 
@@ -49,11 +49,12 @@ def handleVideoFlow(videoPath, outputPath, detectMethod):
         people = measure_locations(frame, bboxes, roi, scale)
         frame_seq.append(frame)
         people_seq.append(people)
+    # Passing fps // 4 to slow down the output video.
+    generate_video_output(frame_seq, people_seq, fps // 4,
+                          outputPath, outputCloudPath)
 
-    generate_video_output(frame_seq, people_seq, fps // 4, outputPath) # Passig fps // 4 to slow down the output video.
 
-
-def handleImageFlow(imagePath, outputPath, detectMethod):
+def handleImageFlow(imagePath, outputPath, outputCloudPath, detectMethod):
     """
     Runs the social detection flow on the image.
 
@@ -66,24 +67,26 @@ def handleImageFlow(imagePath, outputPath, detectMethod):
     roi, scale = get_projection_parameters(image)
     bboxes = detect_people(image, detectMethod)
     people = measure_locations(image, bboxes, roi, scale)
-    generate_image_output(image, people, outputPath)
+    generate_image_output(image, people, outputPath, outputCloudPath)
 
 
 def main():
     path = sys.argv[1]
     output_path = sys.argv[2]
-    if len(sys.argv) <= 3:
+    output_cloud_path = sys.argv[3]
+    if len(sys.argv) <= 4:
         detect_method = 'yolov3'
     else:
-        detect_method = sys.argv[3]
+        detect_method = sys.argv[4]
 
     if path_is_video(path):
-        handleVideoFlow(path, output_path, detect_method)
+        handleVideoFlow(path, output_path, output_cloud_path, detect_method)
     else:
-        handleImageFlow(path, output_path, detect_method)
+        handleImageFlow(path, output_path, output_cloud_path, detect_method)
 
 
-# Usage: "python sd_main.py <path to input> <path to output> [<detection method>]"
+# Usage: "python sd_main.py <path to input> <path to image/video output>
+# <path to point cloud output> [<detection method>]"
 # <detection method> is 'yolov3' if not specified
 if __name__ == "__main__":
     main()

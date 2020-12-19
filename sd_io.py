@@ -123,7 +123,7 @@ def generate_video_output(frame_seq, people_seq, fps,
     """
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
     output_movie = cv2.VideoWriter("output/" + fileName + ".avi", fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
-    birdsEyeMovie = cv2.VideoWriter("output/" + fileName + "BirdsEye.avi", fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
+    birdsEyeMovie = cv2.VideoWriter("output/" + fileName + "BirdsEye.avi", fourcc, fps, (500, 500))
 
     numberOfFrames = len(frame_seq)
     for i in range(numberOfFrames):
@@ -212,16 +212,37 @@ def generatebirdsEyeView(image, people):
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
     """
-    output = np.zeros(image.shape, np.uint8)
+    output = np.zeros((500, 500, 3), np.uint8)
     output[:] = (200, 200, 200)
 
     red = []
     green = []
 
+    maxXCoord = 0
+    maxYCoord = 0
+
+    minXCoord = float("inf")
+    minYCoord = float("inf")
+
     for d in people:
-        topLeft = (d['bbox'][3], d['bbox'][2])
-        bottomRight = (d['bbox'][1], d['bbox'][0])
-        center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
+        xCoord = d['location'][0]
+        yCoord = d['location'][1]
+        if xCoord > maxXCoord:
+            maxXCoord = xCoord
+        if (yCoord > maxYCoord):
+            maxYCoord = yCoord
+        if (xCoord < minXCoord):
+            minXCoord = xCoord
+        if (yCoord < minYCoord):
+            minYCoord = yCoord
+    for d in people:
+        # topLeft = (d['bbox'][3], d['bbox'][2])
+        # bottomRight = (d['bbox'][1], d['bbox'][0])
+        # center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
+        xCoord = d['location'][0] + abs(minXCoord)
+        yCoord = d['location'][1] + abs(minYCoord)
+
+        center = (int(xCoord * 450 / (maxXCoord + abs(minXCoord))) , int(yCoord * 450 / (maxYCoord + abs(minYCoord))))
         if len(d['too_close']) == 0:
             green.append(center)
         else:
@@ -231,7 +252,7 @@ def generatebirdsEyeView(image, people):
             coordsOfOtherPerson = people[idx]['bbox']
             centerOfOtherPerson = ((coordsOfOtherPerson[1] + coordsOfOtherPerson[3]) // 2,
                                    (coordsOfOtherPerson[0] + coordsOfOtherPerson[2]) // 2)
-            output = cv2.line(output, center, centerOfOtherPerson, (0, 0, 255), 2)
+            #output = cv2.line(output, center, centerOfOtherPerson, (0, 0, 255), 2)
 
     for point in red:
         output = cv2.circle(output, point, 5, (0, 0, 255), 10)

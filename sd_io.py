@@ -1,12 +1,18 @@
 # Code adapted from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
+import os
 import time
 import numpy as np
 import cv2
 import operator
 import plotly.graph_objects as go
 
+
 displayImage = None
 mousePts = None
+
+
+# Dimensions of bird's-eye view output videos
+BEV_SIDE = 750
 
 
 def get_projection_parameters(image):
@@ -88,7 +94,7 @@ def getMousePts(event, x, y, flags, param):
 
         mousePts.append((y, x))
 
-
+    
 def generate_image_output(image, people, fileName):
     """
     Generates output based on the specified image and the people + social
@@ -100,20 +106,47 @@ def generate_image_output(image, people, fileName):
     like the output of sd_measure.measure_locations().
     """
     image = drawBoxesAndLines(image, people)
-    birdsEyeImage = generatebirdsEyeView(image, people)
-    cv2.imwrite("output/" + fileName + ".jpg", image)
-    cv2.imwrite("output/" + fileName + "BirdsEye.jpg", birdsEyeImage)
-    plotPointCloud(people, "output/" + fileName + "PointCloud.html")
-    generatebirdsEyeView(image, people)
+
+    # Do a first pass through the people information to find the boundaries of
+    # the smallest rectangle that contains all their horizontal locations,
+    # which we'll use to generate the bird's-eye view
+    X1 = None
+    Y1 = None
+    X2 = None
+    Y2 = None
+    for j in range(len(people)):
+        location = people[j]['location']
+        X = location[0]
+        Y = location[1]
+        if X1 is None or X < X1:
+            X1 = X
+        if Y1 is None or Y < Y1:
+            Y1 = Y
+        if X2 is None or X < X2:
+            X2 = X
+        if Y2 is None or Y > Y2:
+            Y2 = Y
+    
+    birdsEyeImage = generateBirdsEyeView(image, people, X1, Y1, X2, Y2)
+    
+    if not os.path.exists("output"):
+        os.makedirs("output")
+    if not os.path.exists("output/" + fileName):
+        os.makedirs("output/" + fileName)
+    cv2.imwrite("output/" + fileName + "/detection.jpg", image)
+    cv2.imwrite("output/" + fileName + "/birdseye.jpg", birdsEyeImage)
+    plotPointCloud(people, "output/" + fileName + "/pointcloud.html")
 
 
 def generate_video_output(frame_seq, people_seq, fps,
                           fileName):
     """
     Generates output based on the specified video and the people + social
-    distancing information detected in it. It saves the output in the output directory using the given fileName.
-    Namely, it saves the output as a file named fileName.avi, a birds eye view of the output as a file named
-    fileNameBirdsEye.avi, and a point cloud output as a file named fileNamePointCloud.html.
+    distancing information detected in it. It saves the output in the output
+    directory using the given fileName. Namely, it saves the output as a file
+    named fileName.avi, a birds eye view of the output as a file named
+    fileNameBirdsEye.avi, and a point cloud output as a file named
+    fileNamePointCloud.html.
 
     <frame_seq> is a list of the video's frames, in order, as individual images.
 
@@ -121,17 +154,46 @@ def generate_video_output(frame_seq, people_seq, fps,
     itself a list of dicts representing the people in the corresponding frame,
     formatted like the output of sd_measure.measure_locations().
     """
+    if not os.path.exists("output"):
+        os.makedirs("output")
+    if not os.path.exists("output/" + fileName):
+        os.makedirs("output/" + fileName)
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-    output_movie = cv2.VideoWriter("output/" + fileName + ".avi", fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
-    birdsEyeMovie = cv2.VideoWriter("output/" + fileName + "BirdsEye.avi", fourcc, fps, (500, 500))
+    output_movie = cv2.VideoWriter(
+        "output/" + fileName + "/detection.avi", fourcc, fps,
+        (frame_seq[0].shape[1], frame_seq[0].shape[0]))
+    birdsEyeMovie = cv2.VideoWriter(
+        "output/" + fileName + "/BirdsEye.avi",
+        fourcc, fps, (BEV_SIDE, BEV_SIDE))
 
-    numberOfFrames = len(frame_seq)
-    for i in range(numberOfFrames):
+    # Do a first pass through the people information to find the boundaries of
+    # the smallest rectangle that contains all their horizontal locations,
+    # which we'll use to generate the bird's-eye view
+    X1 = None
+    Y1 = None
+    X2 = None
+    Y2 = None
+    for i in range(len(people_seq)):
+        for j in range(len(people_seq[i])):
+            location = people_seq[i][j]['location']
+            X = location[0]
+            Y = location[1]
+            if X1 is None or X < X1:
+                X1 = X
+            if Y1 is None or Y < Y1:
+                Y1 = Y
+            if X2 is None or X < X2:
+                X1 = X
+            if Y2 is None or Y > Y2:
+                Y2 = Y
+    
+    # Now, render the videos
+    for i in range(len(frame_seq)):
         frame = frame_seq[i]
         people = people_seq[i]
 
         frame = drawBoxesAndLines(frame, people)
-        birdsEyeFrame = generatebirdsEyeView(frame, people)
+        birdsEyeFrame = generateBirdsEyeView(frame, people, X1, Y1, X2, Y2)
 
         output_movie.write(frame)
         birdsEyeMovie.write(birdsEyeFrame)
@@ -205,58 +267,43 @@ def plotPointCloud(people, output_path):
     fig.write_html(file=output_path)
 
 
-def generatebirdsEyeView(image, people):
+def generateBirdsEyeView(image, people, X1, Y1, X2, Y2):
     """
-    Draws the birds eye representation of the given image.
+    Draws the bird's-eye representation of the given image.
 
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
     """
-    output = np.zeros((500, 500, 3), np.uint8)
-    output[:] = (200, 200, 200)
+    output = np.zeros((BEV_SIDE, BEV_SIDE, 3), np.uint8)
 
     red = []
     green = []
 
-    maxXCoord = 0
-    maxYCoord = 0
-
-    minXCoord = float("inf")
-    minYCoord = float("inf")
-
-    for d in people:
-        xCoord = d['location'][0]
-        yCoord = d['location'][1]
-        if xCoord > maxXCoord:
-            maxXCoord = xCoord
-        if (yCoord > maxYCoord):
-            maxYCoord = yCoord
-        if (xCoord < minXCoord):
-            minXCoord = xCoord
-        if (yCoord < minYCoord):
-            minYCoord = yCoord
-    for d in people:
-        # topLeft = (d['bbox'][3], d['bbox'][2])
-        # bottomRight = (d['bbox'][1], d['bbox'][0])
-        # center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
-        xCoord = d['location'][0] + abs(minXCoord)
-        yCoord = d['location'][1] + abs(minYCoord)
-
-        center = (int(xCoord * 450 / (maxXCoord + abs(minXCoord))) , int(yCoord * 450 / (maxYCoord + abs(minYCoord))))
-        if len(d['too_close']) == 0:
-            green.append(center)
+    scale = max(X2 - X1, Y2 - Y1)
+    xoffset = (BEV_SIDE - (X2 - X1) / scale * BEV_SIDE)/2
+    yoffset = (BEV_SIDE - (Y2 - Y1) / scale * BEV_SIDE)/2
+    
+    personScreenCoords = []
+    for i in range(len(people)):
+        location = people[i]['location']
+        x = int((location[0] - X1) / scale * BEV_SIDE + xoffset)
+        y = int((location[1] - Y1) / scale * BEV_SIDE + yoffset)
+        personScreenCoords.append((x, y))
+    
+    for i1 in range(len(people)):
+        too_close = people[i1]['too_close']
+        coords = personScreenCoords[i1]
+        if len(too_close) == 0:
+            green.append(coords)
         else:
-            red.append(center)
-
-        for idx in d['too_close']:
-            coordsOfOtherPerson = people[idx]['bbox']
-            centerOfOtherPerson = ((coordsOfOtherPerson[1] + coordsOfOtherPerson[3]) // 2,
-                                   (coordsOfOtherPerson[0] + coordsOfOtherPerson[2]) // 2)
-            #output = cv2.line(output, center, centerOfOtherPerson, (0, 0, 255), 2)
+            red.append(coords)
+            for i2 in too_close:
+                output = cv2.line(output, coords, personScreenCoords[i2],
+                                  (0, 0, 255), 2)
 
     for point in red:
-        output = cv2.circle(output, point, 5, (0, 0, 255), 10)
+        output = cv2.circle(output, point, 5, (0, 0, 255), 5)
     for point in green:
-        output = cv2.circle(output, point, 5, (0, 255, 0), 10)
+        output = cv2.circle(output, point, 5, (0, 255, 0), 5)
 
     return output

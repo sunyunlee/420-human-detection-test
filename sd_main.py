@@ -84,9 +84,9 @@ def main():
         handleImageFlow(path, fileName, detect_method)
 
 
-# Usage: "python sd_main.py <path to input> <name of file> [<detection method>]"
-# <name of file> will be used as the name of the output. It will be postpended with BirdsEye, PointCloud, and the
-# appropriate file extension. Refer to sd_io for more details.
+# Usage: "python sd_main.py <path to input> <output name> [<detection method>]"
+# <output name> will be the name of a folder within the output/ folder where the output
+# will be placed.
 # <detection method> is 'yolov3' if not specified
 if __name__ == "__main__":
     main()

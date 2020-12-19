@@ -12,13 +12,13 @@ def path_is_video(path):
     return path.lower().endswith(('.avi', '.mpg', '.mp4'))
 
 
-def handleVideoFlow(videoPath, outputPath, outputCloudPath, detectMethod):
+def handleVideoFlow(videoPath, fileName, detectMethod):
     """
     Runs the social detection flow on the video.
 
     Arguments:
         videoPath: Relative path to the video.
-        outputPath: Relative path for saving the output.
+        fileName: The name of the video, without the extension. This will be used as the name of the output.
         detectMethod: The human detection method used.
     """
     vidcap = cv2.VideoCapture(videoPath)
@@ -51,42 +51,42 @@ def handleVideoFlow(videoPath, outputPath, outputCloudPath, detectMethod):
         people_seq.append(people)
     # Passing fps // 4 to slow down the output video.
     generate_video_output(frame_seq, people_seq, fps // 4,
-                          outputPath, outputCloudPath)
+                          fileName)
 
 
-def handleImageFlow(imagePath, outputPath, outputCloudPath, detectMethod):
+def handleImageFlow(imagePath, fileName, detectMethod):
     """
     Runs the social detection flow on the image.
 
     Arguments:
         imagePath: Relative path to image.
-        outputPath: Relative path for saving the output.
+        fileName: The name of the video, without the extension. This will be used as the name of the output.
         detectMethod: The human detection method used.
     """
     image = cv2.imread(imagePath)
     roi, scale = get_projection_parameters(image)
     bboxes = detect_people(image, detectMethod)
     people = measure_locations(image, bboxes, roi, scale)
-    generate_image_output(image, people, outputPath, outputCloudPath)
+    generate_image_output(image, people, fileName)
 
 
 def main():
     path = sys.argv[1]
-    output_path = sys.argv[2]
-    output_cloud_path = sys.argv[3]
-    if len(sys.argv) <= 4:
+    fileName = sys.argv[2]
+    if len(sys.argv) <= 3:
         detect_method = 'yolov3'
     else:
-        detect_method = sys.argv[4]
+        detect_method = sys.argv[3]
 
     if path_is_video(path):
-        handleVideoFlow(path, output_path, output_cloud_path, detect_method)
+        handleVideoFlow(path, fileName, detect_method)
     else:
-        handleImageFlow(path, output_path, output_cloud_path, detect_method)
+        handleImageFlow(path, fileName, detect_method)
 
 
-# Usage: "python sd_main.py <path to input> <path to image/video output>
-# <path to point cloud output> [<detection method>]"
+# Usage: "python sd_main.py <path to input> <name of file> [<detection method>]"
+# <name of file> will be used as the name of the output. It will be postpended with BirdsEye, PointCloud, and the
+# appropriate file extension. Refer to sd_io for more details.
 # <detection method> is 'yolov3' if not specified
 if __name__ == "__main__":
     main()

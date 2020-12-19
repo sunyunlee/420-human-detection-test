@@ -1,10 +1,9 @@
-# Code mainly taken from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
+# Code adapted from https://github.com/deepak112/Social-Distancing-AI/tree/08a9a21ccf8ced3e6ff270628cb1c9b21a55fbee
 import time
 import numpy as np
 import cv2
 import operator
 import plotly.graph_objects as go
-
 
 displayImage = None
 mousePts = None
@@ -90,28 +89,31 @@ def getMousePts(event, x, y, flags, param):
         mousePts.append((y, x))
 
 
-def generate_image_output(image, people, outputPath, outputCloudPath):
+def generate_image_output(image, people, fileName):
     """
     Generates output based on the specified image and the people + social
-    distancing information detected in it. It saves the generated image at
-    the given outputPath, and the point cloud of the people's locations at
-    outputCloudPath.
+    distancing information detected in it. It saves the output in the output directory using the given fileName.
+    Namely, it saves the output as a file named fileName.jpg, a birds eye view of the output as a file named
+    fileNameBirdsEye.jpg, and a point cloud output as a file named fileNamePointCloud.html.
 
     <people> is a list of dicts representing the people in the image, formatted
     like the output of sd_measure.measure_locations().
     """
     image = drawBoxesAndLines(image, people)
-    cv2.imwrite(outputPath, image)
-    plotPointCloud(people, outputCloudPath)
+    birdsEyeImage = generatebirdsEyeView(image, people)
+    cv2.imwrite("output/" + fileName + ".jpg", image)
+    cv2.imwrite("output/" + fileName + "BirdsEye.jpg", birdsEyeImage)
+    plotPointCloud(people, "output/" + fileName + "PointCloud.html")
+    generatebirdsEyeView(image, people)
 
 
 def generate_video_output(frame_seq, people_seq, fps,
-                          outputPath, outputCloudPath):
+                          fileName):
     """
     Generates output based on the specified video and the people + social
-    distancing information detected in it. It saves the generated video at the
-    given outputPath, and the point cloud of the people's locations (at frame 0)
-    at outputCloudPath.
+    distancing information detected in it. It saves the output in the output directory using the given fileName.
+    Namely, it saves the output as a file named fileName.avi, a birds eye view of the output as a file named
+    fileNameBirdsEye.avi, and a point cloud output as a file named fileNamePointCloud.html.
 
     <frame_seq> is a list of the video's frames, in order, as individual images.
 
@@ -120,18 +122,24 @@ def generate_video_output(frame_seq, people_seq, fps,
     formatted like the output of sd_measure.measure_locations().
     """
     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-    output_movie = cv2.VideoWriter(outputPath, fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
+    output_movie = cv2.VideoWriter("output/" + fileName + ".avi", fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
+    birdsEyeMovie = cv2.VideoWriter("output/" + fileName + "BirdsEye.avi", fourcc, fps, (frame_seq[0].shape[1], frame_seq[0].shape[0]))
 
     numberOfFrames = len(frame_seq)
     for i in range(numberOfFrames):
         frame = frame_seq[i]
         people = people_seq[i]
+
         frame = drawBoxesAndLines(frame, people)
+        birdsEyeFrame = generatebirdsEyeView(frame, people)
+
         output_movie.write(frame)
+        birdsEyeMovie.write(birdsEyeFrame)
 
     output_movie.release()
+    birdsEyeMovie.release()
 
-    plotPointCloud(people_seq[0], outputCloudPath)
+    plotPointCloud(people_seq[0], "output/" + fileName + "PointCloud.html")
 
 
 def drawBoxesAndLines(image, people):
@@ -181,7 +189,7 @@ def plotPointCloud(people, output_path):
             colors.append('#00ff00')
         else:
             colors.append('#ff0000')
-    
+
     fig = go.Figure(data=[go.Scatter3d(
         x=x, y=y, z=z,
         mode='markers',
@@ -191,7 +199,43 @@ def plotPointCloud(people, output_path):
             opacity=1
         ))],
         layout=go.Layout(
-            scene = dict(
+            scene=dict(
                 aspectmode='data'
-        )))
+            )))
     fig.write_html(file=output_path)
+
+
+def generatebirdsEyeView(image, people):
+    """
+    Draws the birds eye representation of the given image.
+
+    <people> is a list of dicts representing the people in the image, formatted
+    like the output of sd_measure.measure_locations().
+    """
+    output = np.zeros(image.shape, np.uint8)
+    output[:] = (200, 200, 200)
+
+    red = []
+    green = []
+
+    for d in people:
+        topLeft = (d['bbox'][3], d['bbox'][2])
+        bottomRight = (d['bbox'][1], d['bbox'][0])
+        center = tuple(coord // 2 for coord in tuple(map(operator.add, topLeft, bottomRight)))
+        if len(d['too_close']) == 0:
+            green.append(center)
+        else:
+            red.append(center)
+
+        for idx in d['too_close']:
+            coordsOfOtherPerson = people[idx]['bbox']
+            centerOfOtherPerson = ((coordsOfOtherPerson[1] + coordsOfOtherPerson[3]) // 2,
+                                   (coordsOfOtherPerson[0] + coordsOfOtherPerson[2]) // 2)
+            output = cv2.line(output, center, centerOfOtherPerson, (0, 0, 255), 2)
+
+    for point in red:
+        output = cv2.circle(output, point, 5, (0, 0, 255), 10)
+    for point in green:
+        output = cv2.circle(output, point, 5, (0, 255, 0), 10)
+
+    return output

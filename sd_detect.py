@@ -22,10 +22,11 @@ def detect_people(image, method: str = Union["yolov3", "hog"]):
     * x-coordinate on the image of the person's bounding box's left
     """
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    print("######################" + method)
     if method == "yolov3":
         result = YOLOv3(image_gray)
-    # elif method == "hog":
-    #     result = HOG(image)
+    elif method == "hog":
+        result = HOG(image, (5, 5), (5, 5), 3)
 
     return result
 
@@ -102,14 +103,13 @@ def process_yolov3_output(outputs, input_shape):
     return boxes_filtered
 
 
-def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: int):
+def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: float):
     """
     Returns bounding boxes around humans that the HOG detectors detect.
 
     The output is in the same format as that of detect_people().
     """
     hog = cv2.HOGDescriptor()
-    # hog = cv2.HOGDescriptor(img.shape, (8, 8), (4, 4), (8, 8), 9, 1, -1, 0, 0.2, 1, 64, True)
     hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
     img = imutils.resize(img, width=int(scale*img.shape[1]))
@@ -126,33 +126,39 @@ def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: int):
         bottom = int((y + h) / scale)
         results.append([bottom, right, top, left])
 
-    return results, list(weights.flatten())
+    weights = list(weights.flatten())
+    results, weights = HOG_remove_low_confidence(results, weights, confid_thresh=1)
+    results, weights = remove_overlapping_boxes(results, weights)
+
+    # return results, list(weights.flatten())
+    return results
 
 
-def remove_overlapping_boxes(boxes: List[List[int]]) -> List[List[int]]:
+def remove_overlapping_boxes(boxes: List[List[int]], weights: List[float]) -> List[List[int]]:
     """ Removes bounding boxes which completely overlaps another bounding box
 
     :param boxes: the bounding boxes
     :return: the filtered bounding boxes 
     """
+
     box_to_remove = []
     for i in range(len(boxes)):
-        curr_box = boxes[i]
+        curr_bottom, curr_right, curr_top, curr_left = boxes[i]
         for j in range(len(boxes)):
             if i != j: 
-                new_box = boxes[j]
-                if curr_box[0] <= new_box[0] and \
-                    curr_box[1] <= new_box[1] and \
-                        curr_box[2] >= new_box[2] and \
-                            curr_box[3] >= new_box[3]:
+                new_bottom, new_right, new_top, new_left = boxes[j]
+                if curr_left <= new_left and \
+                    curr_top <= new_top and \
+                        curr_right >= new_right and \
+                            curr_bottom >= new_bottom:
                     box_to_remove.append(i)
 
     box_to_remove = sorted(list(set(box_to_remove)))
 
-    for i in range(len(box_to_remove) - 1, -1, -1):
-        boxes.pop(box_to_remove[i])
+    boxes = remove_indices(boxes, box_to_remove)
+    weights = remove_indices(weights, box_to_remove)
 
-    return boxes
+    return boxes, weights
                 
 
 def HOG_remove_low_confidence(boxes: List[List[int]], weights: List[int], confid_thresh: int = 1):
@@ -173,6 +179,7 @@ def HOG_remove_low_confidence(boxes: List[List[int]], weights: List[int], confid
     weights_filtered = remove_indices(weights, indices)
 
     return boxes_filtered, weights_filtered
+    # return boxes_filtered
 
 
 def remove_indices(l: list, indices: List[int]) -> list:

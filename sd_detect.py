@@ -22,7 +22,6 @@ def detect_people(image, method: str = Union["yolov3", "hog"]):
     * x-coordinate on the image of the person's bounding box's left
     """
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    print("######################" + method)
     if method == "yolov3":
         result = YOLOv3(image_gray)
     elif method == "hog":
@@ -33,11 +32,11 @@ def detect_people(image, method: str = Union["yolov3", "hog"]):
 
 def YOLOv3(img):
     """
-    Identifies the rectangular areas using yolov3 pre trained model 
+    Identifies the rectangular areas using yolov3 pre trained model
 
     Ref: https://opencv-tutorial.readthedocs.io/en/latest/yolo/yolo.html
     """
-    # Create a model from pre-trained weights 
+    # Create a model from pre-trained weights
     model = cv2.dnn.readNetFromDarknet(config_path, weight_path)
 
     # Change the image size as the input yolo size (416, 416)
@@ -51,7 +50,7 @@ def YOLOv3(img):
     model.setInput(input_image)
     outputs = model.forward(layer_names)
 
-    # # Get bounding boxes 
+    # # Get bounding boxes
     boxes_filtered = process_yolov3_output(outputs, img.shape[:2])
 
     return boxes_filtered
@@ -59,13 +58,13 @@ def YOLOv3(img):
 
 def process_yolov3_output(outputs, input_shape):
     """
-    From the output of the model, select detections for humans, and which confidence 
+    From the output of the model, select detections for humans, and which confidence
     score greater than 0.5.
-    
+
     The output is in the same format as that of detect_people().
 
     Ref: https://opencv-tutorial.readthedocs.io/en/latest/yolo/yolo.html
-    """    
+    """
     boxes = []
     confid_scores = []
     confid_thresh = 0.5
@@ -73,24 +72,24 @@ def process_yolov3_output(outputs, input_shape):
     H, W = input_shape[0], input_shape[1]
 
     for output in outputs:
-        for pred in output: # first four indices indicate the location, rest are the prediction scores 
+        for pred in output: # first four indices indicate the location, rest are the prediction scores
             scores = pred[5:]
             class_id = np.argmax(scores)
             confid_score = scores[class_id]
-            
+
             if class_id == 0: # human class index in COCO
                 if confid_score > confid_thresh: # need to be confident in prediction
                     box = pred[0:4] * np.array([W, H, W, H])
                     (x_center, y_center, width, height) = box.astype("int")
-                    
-                    # Get top left corner pixel coordinates 
+
+                    # Get top left corner pixel coordinates
                     x = int(x_center - (width / 2))
                     y = int(y_center - (width / 2))
-                    
+
                     boxes.append([x, y, int(width), int(height)])
                     confid_scores.append(float(confid_score))
 
-    # Non maximum suppression to remove any overlapping boxes               
+    # Non maximum suppression to remove any overlapping boxes
     indices = cv2.dnn.NMSBoxes(boxes, confid_scores, confid_thresh, thresh)
     indices = indices.flatten()
     boxes_filtered = []
@@ -119,7 +118,7 @@ def HOG(img, win_stride: Tuple[int], padding: Tuple[int], scale: float):
 
     # pick = non_max_suppression(rects, probs=None, overlapThresh=0.1)
     results = []
-    for i, (x, y, w, h) in enumerate(rects): 
+    for i, (x, y, w, h) in enumerate(rects):
         left = int(x / scale)
         top = int(y / scale)
         right = int((x + w) / scale)
@@ -138,14 +137,14 @@ def remove_overlapping_boxes(boxes: List[List[int]], weights: List[float]) -> Li
     """ Removes bounding boxes which completely overlaps another bounding box
 
     :param boxes: the bounding boxes
-    :return: the filtered bounding boxes 
+    :return: the filtered bounding boxes
     """
 
     box_to_remove = []
     for i in range(len(boxes)):
         curr_bottom, curr_right, curr_top, curr_left = boxes[i]
         for j in range(len(boxes)):
-            if i != j: 
+            if i != j:
                 new_bottom, new_right, new_top, new_left = boxes[j]
                 if curr_left <= new_left and \
                     curr_top <= new_top and \
@@ -159,22 +158,22 @@ def remove_overlapping_boxes(boxes: List[List[int]], weights: List[float]) -> Li
     weights = remove_indices(weights, box_to_remove)
 
     return boxes, weights
-                
+
 
 def HOG_remove_low_confidence(boxes: List[List[int]], weights: List[int], confid_thresh: int = 1):
-    """ Returns bounding boxes and the associated weights with weights lower than 
-    the confidence threshold 
+    """ Returns bounding boxes and the associated weights with weights lower than
+    the confidence threshold
 
-    :param boxes: the bounding boxes 
+    :param boxes: the bounding boxes
     :param weights: the confidences/weights of the predictions
     :param confid_thresh: the confidence threshold
-    :return: list of bounding boxes and the associated weights 
+    :return: list of bounding boxes and the associated weights
     """
     indices = []
     for i in range(len(weights)):
-        if weights[i] < confid_thresh: 
+        if weights[i] < confid_thresh:
             indices.append(i)
-    
+
     boxes_filtered = remove_indices(boxes, indices)
     weights_filtered = remove_indices(weights, indices)
 
@@ -187,11 +186,11 @@ def remove_indices(l: list, indices: List[int]) -> list:
 
     :param l: the list of items
     :param indices: list of indices at which to remove the items
-    :return: list l with items removed 
+    :return: list l with items removed
     """
     for i in range(len(indices) - 1, -1, -1):
         if indices[i] >= len(l):
             raise Exception("Index out of bounds!")
         l.pop(indices[i])
-    
+
     return l

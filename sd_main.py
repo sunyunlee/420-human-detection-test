@@ -73,11 +73,10 @@ def handleImageFlow(imagePath, fileName, detectMethod):
 def main():
     path = sys.argv[1]
     fileName = sys.argv[2]
-    print(len(sys.argv))
-    if len(sys.argv) <= 4:
+    if len(sys.argv) <= 3:
         detect_method = 'yolov3'
     else:
-        detect_method = sys.argv[4]
+        detect_method = sys.argv[3]
 
     if path_is_video(path):
         handleVideoFlow(path, fileName, detect_method)
